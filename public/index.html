@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#12304a">
   <title>LSP5004 Cataloguing Practice</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -15,7 +16,7 @@
     <span class="badge">AACR2 • Practice</span>
   </header>
 
-  <nav>
+  <nav class="section-nav" aria-label="Cataloguing sections">
     <button class="nav-btn active" data-section="A">Section A</button>
     <button class="nav-btn" data-section="B">Section B</button>
     <button class="nav-btn" data-section="C">Section C</button>
@@ -23,54 +24,39 @@
   </nav>
 
   <main>
-    <section class="card">
-      <h2>Generate Catalogue Entry</h2>
-      <p class="muted">Enter only information you actually have. The system will not invent missing bibliographic facts.</p>
+    <section class="card input-card">
+      <div class="section-label">SECTION <span id="sectionLabel">A</span></div>
+      <h2>Paste Your Complete Cataloguing Question</h2>
+      <p class="muted">
+        Paste the whole question here. You do not need to enter title, author, publisher,
+        date, notes or other fields separately. The system extracts the information supplied
+        in the question and prepares a practice catalogue entry.
+      </p>
 
-      <div class="grid">
-        <label>
-          Section
-          <select id="section">
-            <option value="A">A — Serial Publications: Complexities</option>
-            <option value="B">B — Uniform Titles; Motion Pictures</option>
-            <option value="C">C — Video Recordings; Sound Recordings</option>
-            <option value="D">D — Electronic Resources; Microforms</option>
-          </select>
-        </label>
+      <label class="question-label" for="question">Complete Question</label>
+      <textarea id="question" class="question-box"
+        placeholder="Paste the complete cataloguing question here...&#10;&#10;Example: Prepare a catalogue entry for the book ..."></textarea>
 
-        <label>
-          Material Type
-          <select id="materialType">
-            <option>Serial Publication</option>
-            <option>Motion Picture</option>
-            <option>Video Recording</option>
-            <option>Sound Recording</option>
-            <option>Electronic Resource — Data</option>
-            <option>Electronic Resource — Program</option>
-            <option>Microform</option>
-          </select>
-        </label>
+      <div class="action-row">
+        <button id="generate" class="primary">GENERATE CATALOGUE ENTRY</button>
+        <button id="clear" class="secondary">CLEAR</button>
       </div>
 
-      <div class="grid">
-        <label>Title proper<input id="title" placeholder="Enter title"></label>
-        <label>Statement of responsibility<input id="responsibility" placeholder="Author / creator, if supplied"></label>
-        <label>Edition statement<input id="edition" placeholder="Edition, if supplied"></label>
-        <label>Place of publication<input id="place" placeholder="Place, if supplied"></label>
-        <label>Publisher<input id="publisher" placeholder="Publisher, if supplied"></label>
-        <label>Date<input id="date" placeholder="Date, if supplied"></label>
-        <label>Physical description<input id="physical" placeholder="Extent / dimensions / format"></label>
-        <label>Notes<textarea id="notes" placeholder="Duration, frequency, system requirements, source of title, etc."></textarea></label>
-      </div>
-
-      <button id="generate" class="primary">GENERATE CATALOGUE ENTRY</button>
-      <button id="clear" class="secondary">CLEAR</button>
+      <p id="hint" class="hint">Tip: Paste the entire question exactly as given in your assignment.</p>
     </section>
 
     <section id="result" class="card hidden">
       <div class="result-head">
-        <h2>Catalogue Result</h2>
-        <span id="status" class="status">Requires verification</span>
+        <div>
+          <div class="section-label">GENERATED RESULT</div>
+          <h2>Catalogue Entry</h2>
+        </div>
+        <span id="status" class="status">Ready</span>
+      </div>
+
+      <div class="summary-grid">
+        <div><span>Section</span><strong id="outSection"></strong></div>
+        <div><span>Material Type</span><strong id="outMaterial"></strong></div>
       </div>
 
       <div class="result-box">
@@ -78,19 +64,52 @@
         <pre id="entry"></pre>
       </div>
 
-      <div class="grid result-grid">
-        <div><h3>Subject Heading(s)</h3><p id="subject"></p></div>
-        <div><h3>Added Entries / Access Points</h3><p id="accessPoints"></p></div>
-        <div><h3>AACR2 Check</h3><p id="verification"></p></div>
-        <div><h3>Missing / Unverified Information</h3><p id="missing"></p></div>
+      <div class="details-grid">
+        <div class="detail-card">
+          <h3>Title Proper</h3>
+          <p id="outTitle"></p>
+        </div>
+        <div class="detail-card">
+          <h3>Statement of Responsibility</h3>
+          <p id="outResponsibility"></p>
+        </div>
+        <div class="detail-card">
+          <h3>Edition Statement</h3>
+          <p id="outEdition"></p>
+        </div>
+        <div class="detail-card">
+          <h3>Publication Statement</h3>
+          <p id="outPublication"></p>
+        </div>
+        <div class="detail-card">
+          <h3>Physical Description</h3>
+          <p id="outPhysical"></p>
+        </div>
+        <div class="detail-card">
+          <h3>Notes / Other Information</h3>
+          <p id="outNotes"></p>
+        </div>
       </div>
 
-      <button id="pdf" class="primary">DOWNLOAD CATALOGUE ENTRY AS PDF</button>
+      <div class="detail-card full">
+        <h3>Missing / Unverified Information</h3>
+        <p id="missing"></p>
+      </div>
+
+      <div class="verification">
+        <strong>AACR2 Practice Check:</strong>
+        <span id="verification"></span>
+      </div>
+
+      <div class="action-row">
+        <button id="pdf" class="primary">DOWNLOAD PDF</button>
+        <button id="editQuestion" class="secondary">EDIT QUESTION</button>
+      </div>
     </section>
   </main>
 
   <footer>
-    <p>LSP5004 practice tool · Use legally obtained/licensed reference material for detailed verification.</p>
+    <p>LSP5004 practice tool · Use your authorised course/reference material for final verification.</p>
   </footer>
 
   <script src="script.js"></script>
