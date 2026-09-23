@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: lsp5004-cataloguing
+    runtime: node
+    buildCommand: npm install --no-audit --no-fund
+    startCommand: npm start
+    healthCheckPath: /health
