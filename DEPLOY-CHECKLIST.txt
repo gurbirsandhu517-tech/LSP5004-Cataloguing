@@ -1,7 +1,0 @@
-LSP5004 V10 deployment checklist
-1. Upload this ZIP to your project.
-2. Keep public/index.html, public/style.css and public/script.js inside public/.
-3. Set GEMINI_API_KEY in hosting environment variables.
-4. Deploy with npm install / npm start.
-5. Open the site and paste a complete cataloguing question.
-6. Generate; the answer cards appear inside the tool.
