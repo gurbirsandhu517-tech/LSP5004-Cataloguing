@@ -1,0 +1,1 @@
+Inside/outside alignment completely fixed with clean zip archive.
