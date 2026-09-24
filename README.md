@@ -1,1 +1,0 @@
-# Advanced Catalogue Card Workbench - Physical Ruled Lines Embedded
