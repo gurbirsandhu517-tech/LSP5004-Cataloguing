@@ -4,7 +4,7 @@ const PDFDocument = require("pdfkit");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const VERSION = "V37-AACR2-PROFESSIONAL-FAST";
+const VERSION = "V38-AACR2-PROFESSIONAL-FAST";
 
 app.use(express.json({limit:"25mb"}));
 app.use(express.urlencoded({extended:true,limit:"25mb"}));
@@ -137,47 +137,61 @@ function extractLabeled(q, labels){
 }
 
 function parseSerialQuestion(q, materialType){
-  const text=str(q).replace(/\r/g,' ').replace(/\n+/g,' ').replace(/\s+/g,' ').trim();
+  const raw=str(q);
+  const text=raw.replace(/\r/g,' ').replace(/\n+/g,' ').replace(/\s+/g,' ').trim();
   const strip=x=>str(x).replace(/^[.\s]+|[.\s]+$/g,'').trim();
   const natural=inferNaturalFields(text,'Serial Publication');
 
-  // Title + responsibility: prefer the catalogue slash convention, otherwise
-  // recover a title from the natural-language request.
-  let titleStatement='', responsibility='';
-  const titleSlash=text.match(/(?:for|of)\s+(?:the\s+)?(?:following\s+)?(.+?)\s*\/\s*([^—]+?)(?=\s+—|\s+-\s+|$)/i)
-    || text.match(/^(?:create|make|prepare|generate|write)[\s\S]*?\b(?:for|of)\s+(?:the\s+)?(.+?)\s*\/\s*([^—]+?)(?=\s+—|\s+-\s+|$)/i);
-  if(titleSlash){
-    titleStatement=strip(titleSlash[1]);
-    responsibility=strip(titleSlash[2]);
+  // Explicit labels are authoritative. This makes the built-in examples
+  // deterministic and avoids guessing a title from the whole question.
+  const labeledTitle=extractLabeled(raw,['Title','Title proper','Title of the serial']);
+  const labeledEditor=extractLabeled(raw,['Editor','Edited by']);
+  const labeledPlace=extractLabeled(raw,['Place','Place of Publication','Publication Place']);
+  const labeledPublisher=extractLabeled(raw,['Publisher','Publisher/Distributor']);
+  const labeledDate=extractLabeled(raw,['Date','Date of Publication','Publication Date']);
+  const labeledFrequency=extractLabeled(raw,['Frequency']);
+  const labeledISSN=extractLabeled(raw,['ISSN']);
+
+  let titleStatement=labeledTitle?strip(labeledTitle):'';
+  let responsibility=labeledEditor?'edited by '+strip(labeledEditor):'';
+
+  if(!titleStatement){
+    const titleSlash=text.match(/(?:for|of)\s+(?:the\s+)?(?:following\s+)?(.+?)\s*\/\s*([^—]+?)(?=\s+—|\s+-\s+|$)/i)
+      || text.match(/^(?:create|make|prepare|generate|write)[\s\S]*?\b(?:for|of)\s+(?:the\s+)?(.+?)\s*\/\s*([^—]+?)(?=\s+—|\s+-\s+|$)/i);
+    if(titleSlash){titleStatement=strip(titleSlash[1]);responsibility=responsibility||strip(titleSlash[2]);}
   }
   if(!titleStatement){
     const direct=text.match(/(?:^|:\s*)([^—]+?)\s*\/\s*(edited by|compiled by|prepared by|written by|by)\s+(.+?)(?=\s+—|\s+-\s+|$)/i);
-    if(direct){ titleStatement=strip(direct[1]); responsibility=strip(direct[2]+' '+direct[3]); }
+    if(direct){titleStatement=strip(direct[1]);responsibility=responsibility||strip(direct[2]+' '+direct[3]);}
   }
-  if(!titleStatement) {
+  if(!titleStatement && natural.title){
     titleStatement=strip(natural.title);
-    if(natural.editor) responsibility='edited by '+natural.editor;
+    if(!responsibility && natural.editor) responsibility='edited by '+natural.editor;
   }
-  // Robust recovery for catalogue examples and ordinary prose: the title is the
-  // bibliographic phrase immediately before the first slash, em dash, or imprint.
-  if(!titleStatement) {
+  if(!titleStatement){
     const cleaned=stripInstructionPrefix(text);
     const beforeSlash=cleaned.split(/\s+\/\s+/)[0];
     const beforeImprint=cleaned.split(/\s+[—–-]\s+/)[0];
     const candidate=strip((beforeSlash||beforeImprint||cleaned).replace(/^(?:the\s+)?(?:following|given|below)\s*[:\-]?\s*/i,''));
     if(candidate && candidate.length<220 && !/^(?:create|make|prepare|write|produce|generate)\b/i.test(candidate)) titleStatement=candidate;
   }
-  titleStatement=titleStatement.replace(/^(?:the\s+)?(?:serial publication|serial)\s*[:\-]\s*/i,'').trim();
+  titleStatement=titleStatement.replace(/^(?:the\s+)?(?:serial publication|serial|journal|periodical)\s*[:\-]\s*/i,'').trim();
 
   const edition=(text.match(/\b(?:\d+(?:st|nd|rd|th)\s+ed(?:ition)?|edition)\b/i)||[])[0]||'';
   const numbering=(text.match(/\bVol\.\s*\d+\s*,\s*no\.\s*\d+(?:\s*\([^)]*\))?/i)||[])[0]||natural.numbering||'';
-  const frequency=(text.match(/\b(Quarterly|Monthly|Bimonthly|Biweekly|Weekly|Annual|Semiannual|Irregular)\b/i)||[])[1]||natural.frequency||'';
-  const issn=(text.match(/\bISSN\s*[:#-]?\s*([0-9]{4}[-\s]?[0-9]{3}[0-9Xx])\b/i)||[])[1]||natural.issn||'';
+  const frequency=labeledFrequency||((text.match(/\b(Quarterly|Monthly|Bimonthly|Biweekly|Weekly|Annual|Semiannual|Irregular)\b/i)||[])[1]||natural.frequency||'');
+  const issn=labeledISSN||((text.match(/\bISSN\s*[:#-]?\s*([0-9]{4}[-\s]?[0-9]{3}[0-9Xx])\b/i)||[])[1]||natural.issn||'');
 
   let imprint='';
-  const im=text.match(/(?:—|–|-)\s*([^—–]+?)\s*:\s*([^,]+),\s*((?:19|20)\d{2})(?:\s*[–—-]|\.|$)/i);
-  if(im) imprint=`${strip(im[1])} : ${strip(im[2])}, ${im[3]}`;
-  else if(natural.place||natural.publisher||natural.year) imprint=[natural.place,natural.publisher,natural.year].filter(Boolean).join(' : ').replace(/\s+:\s+(?=\d{4}$)/,' ');
+  const place=labeledPlace||natural.place;
+  const publisher=labeledPublisher||natural.publisher;
+  const year=labeledDate||natural.year;
+  if(place||publisher||year){
+    imprint=(place&&publisher&&year)?`${strip(place)} : ${strip(publisher)}, ${strip(year)}`:[place,publisher,year].filter(Boolean).join(' : ');
+  }else{
+    const im=text.match(/(?:—|–|-)\s*([^—–]+?)\s*:\s*([^,]+),\s*((?:19|20)\d{2})(?:\s*[–—-]|\.)?$/i);
+    if(im) imprint=`${strip(im[1])} : ${strip(im[2])}, ${im[3]}`;
+  }
 
   const continues=(text.match(/\bContinues\s*:\s*(.+?)(?=\s+(?:Includes|Subject coverage|Subjects|Added entries|UDC|Call\s*(?:No\.?|number)|ISSN)\s*:?\s*|\s*$)/i)||[])[1]||'';
   const includes=(text.match(/\bIncludes\s*:?\s*(.+?)(?=\s+Subject coverage\s+includes|\s+Subjects\s*:|\s+Added entries\s*:|\s+UDC\s*:|\s+Call\s*(?:No\.?|number)\s*:|\s+ISSN\s*:|\s*$)/i)||[])[1]||'';
@@ -186,30 +200,17 @@ function parseSerialQuestion(q, materialType){
   const addedBlock=(text.match(/\bAdded entries\s*:\s*(.+?)(?=\s+UDC\s*:|\s+Call\s*(?:No\.?|number)\s*:|\s*$)/i)||[])[1]||'';
   const udc=(text.match(/\bUDC\s*:\s*([^\s.]+(?:\([^)]*\))?)/i)||[])[1]||'';
   const call=(text.match(/\bCall\s*(?:No\.?|number)\s*:\s*([^\s]+(?:\s+[^\s]+)?)/i)||[])[1]||'';
-  const accession=extractLabeled(text,["Accession number","Accession no","Accession"]);
+  const accession=extractLabeled(raw,["Accession number","Accession no","Accession"]);
 
-  const editorMatch=text.match(/\bedited by\s+(.+?)(?=\s*;\s*with contributions from|\s+—|\s*$)/i);
-  const editorName=editorMatch ? strip(editorMatch[1]) : '';
-  const contributorText=(text.match(/\bwith contributions from\s+(.+?)(?=\s+—|\s+ISSN\b|\s+Vol\.\b|\s*$)/i)||[])[1]||'';
-  const contributorNames=[];
-  const cnRe=/([A-Z][A-Za-z]+(?:\s+[A-Z]\.)?\s+[A-Za-z-]+)(?=,\s+|\s+and\s+|[.]?\s*$)/g;
-  let cm;
-  while((cm=cnRe.exec(contributorText))) contributorNames.push(strip(cm[1]));
-  const addedNames=[];
-  const addedRe=/([A-Z][A-Za-z-]+,\s*[A-Z][A-Za-z.]+(?:\s+[A-Za-z.]+)?)(?=,\s*(?:contributor|editor|author)\b|\.)/g;
-  let am;
-  while((am=addedRe.exec(addedBlock))) addedNames.push(strip(am[1]));
-  const traceNames=[...new Set([
-    ...(editorName?[editorName]:[]),
-    ...contributorNames,
-    ...(contributorNames.length?[]:addedNames)
-  ].map(strip).filter(Boolean))];
+  if(!titleStatement||titleStatement.length>220){
+    return {materialType:'Serial Publication',mainEntry:'',titleStatement:'',responsibility:'',cards:[],addedEntries:[],subjectEntries:[],missing:['A serial title could not be identified from the supplied question.'],verification:'No catalogue card fabricated because no identifiable serial title was supplied.'};
+  }
 
   const main=[];
-  if(titleStatement) main.push(titleStatement + (responsibility ? ' / '+responsibility.replace(/\.*$/,'')+'.' : '.'));
+  main.push(titleStatement+(responsibility?' / '+responsibility.replace(/\.*$/,'')+'.':'.'));
   if(edition) main.push(edition.replace(/\.*$/,'')+'.');
   if(numbering) main.push(numbering.replace(/\.*$/,'')+'.');
-  if(imprint) main.push(imprint.replace(/\.*$/,'')+'.');
+  if(imprint) main.push('— '+imprint.replace(/\.*$/,'')+'.');
   if(frequency) main.push(frequency+'.');
   if(continues) main.push('Continues: '+strip(continues)+'.');
   if(includes) main.push('Includes '+strip(includes).replace(/\.*$/,'')+'.');
@@ -222,25 +223,27 @@ function parseSerialQuestion(q, materialType){
   if(udc) main.push('UDC: '+udc+'.');
   if(call) main.push('Call No.: '+call+'.');
 
-  const tracing=[];
-  let roman=1;
-  for(const n of traceNames){
-    if(n) tracing.push(`${roman++}. ${n.replace(/\.$/,'')}.`);
+  const traceNames=[];
+  if(labeledEditor) traceNames.push(strip(labeledEditor));
+  const editorMatch=text.match(/\bedited by\s+(.+?)(?=\s*;|\s+with\s+|\s+—|\s*$)/i);
+  if(!labeledEditor && editorMatch) traceNames.push(strip(editorMatch[1]));
+
+  if(traceNames.length){
+    main.push('Tracing:');
+    traceNames.forEach((n,i)=>main.push(`${i+1}. ${n}.`));
   }
-  if(tracing.length){ main.push('Tracing:'); main.push(...tracing); }
 
   const cards=[{entryType:'MAIN ENTRY',cardType:'Main Entry',callNumber:call,accessionNumber:accession,lines:main}];
   const missing=[];
-  if(!titleStatement) missing.push('Title was not identified from the question.');
   if(!imprint) missing.push('Publication/place/date details were not identified.');
   return {
-    materialType:'Serial Publication', mainEntry:titleStatement, titleStatement, responsibility,
-    edition, materialSpecific:numbering, imprint, physicalDescription:'',
-    series:'', notes:[frequency,continues,includes,coverage].filter(Boolean).join(' '),
-    standardNumber:issn?'ISSN '+issn:'', callNumber:call, accessionNumber:accession,
-    addedEntries:tracing.map(x=>({type:'personal name',heading:x.replace(/^\d+\.\s*/,'').replace(/\.$/,''),reference:'Tracing on main entry.'})),
+    materialType:'Serial Publication',mainEntry:titleStatement,titleStatement,responsibility,
+    edition,materialSpecific:numbering,imprint,physicalDescription:'',series:'',
+    notes:[frequency,continues,includes,coverage].filter(Boolean).join(' '),
+    standardNumber:issn?'ISSN '+issn:'',callNumber:call,accessionNumber:accession,
+    addedEntries:traceNames.map(x=>({type:'personal name',heading:x,reference:'Tracing on main entry.'})),
     subjectEntries:subjectBlock?subjectBlock.split(/\.\s+(?=[A-Z])/).filter(Boolean).map(x=>({type:'subject',heading:strip(x),reference:'Subject heading on main entry.'})):[],
-    cards, verification:'AACR2-style serial entry generated from the complete supplied question.', missing
+    cards,verification:'AACR2-style serial entry generated from the supplied question.',missing
   };
 }
 
@@ -388,7 +391,7 @@ function localParse(question, section, materialType){
   const get=(labels)=>extractLabeled(q,labels);
   const natural=inferNaturalFields(q,mt);
   const n=(x,y)=>str(x)||str(y);
-  const titleL=n(get(['Title','Title proper','Title of the work','Film title','Book title']),natural.title);
+  const titleL=get(['Title','Title proper','Title of the work','Film title','Book title']);
   const director=n(get(['Director','Directed by']),natural.director);
   const author=n(get(['Author','Creator','Writer']),natural.author);
   const screenplay=n(get(['Screenplay','Screenwriter']),natural.screenplay);
@@ -549,6 +552,9 @@ function localParse(question, section, materialType){
   };
 }
 
+function cleanCatalogueLine(line){
+  return str(line).replace(/\\s+/g,' ').trim();
+}
 function makeCardsFromEntries(r){
   // One question = one catalogue entry/card. Added access points and tracing
   // stay inside the same main catalogue card. Only genuine overflow creates
@@ -571,6 +577,16 @@ function makeCardsFromEntries(r){
     accessionNumber:accession,
     lines:mainLines
   }];
+}
+function ensureTracing(lines, addedEntries, subjectEntries){
+  const out=arr(lines).map(str).filter(Boolean);
+  if(out.some(x=>/^Tracing\s*:/i.test(x))) return out;
+  const headings=[
+    ...arr(addedEntries).map(x=>str(x?.heading)).filter(Boolean),
+    ...arr(subjectEntries).map(x=>str(x?.heading)).filter(Boolean)
+  ];
+  if(headings.length) out.push('Tracing: '+headings.map((h,i)=>`${i+1}. ${h}`).join('  '));
+  return out;
 }
 function finalizeCards(r){
   const mi=arr(r.cards).findIndex(c=>/^MAIN ENTRY$/i.test(str(c.entryType)));
