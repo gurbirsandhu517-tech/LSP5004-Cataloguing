@@ -1,1 +1,0 @@
-Exact original UI preserved with fully responsive Generate button.
