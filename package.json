@@ -1,0 +1,16 @@
+{
+  "name": "lsp5004-cataloguing",
+  "version": "45.0.0",
+  "description": "LSP5004 AACR2 Cataloguing Engine V45 \u2014 stable traditional catalogue-card layout and field parsing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pdfkit": "^0.15.0"
+  }
+}
