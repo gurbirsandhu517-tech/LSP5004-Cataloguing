@@ -1,0 +1,17 @@
+body {
+    font-family: monospace;
+    background: #f4f4f4;
+    padding: 20px;
+}
+.container {
+    max-width: 600px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+}
+.main-entry-card {
+    border: 2px solid #000;
+    padding: 15px;
+    background: #fff;
+}
