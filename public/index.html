@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LSP5004 — Advanced AACR2 Catalogue Card Engine</title>
+<link rel="stylesheet" href="/style.css?v=21">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="mark">L</div><div><h1>LSP5004</h1><p>Advanced Library Cataloguing · AACR2 Practice</p></div></div>
+  <div class="topbadges"><span>GEMINI PRIMARY</span><span>AACR2</span><span>ALL ENTRIES</span><span>PDF CARDS</span></div>
+</header>
+<main>
+  <section class="hero">
+    <div class="eyebrow">ADVANCED CATALOGUE CARD WORKBENCH</div>
+    <h2>Any catalogue question → the correct entry set</h2>
+    <p>The engine reads the exact wording, identifies the requested material/entry, prepares every valid AACR2 access point, adds tracing, and continues long entries across unlimited cards.</p>
+    <div class="heroRules"><span>12.5 × 7.5 cm</span><span>Vertical + horizontal ruling</span><span>Accession: 5th line</span><span>No card limit</span></div>
+  </section>
+
+  <section class="materialPanel">
+    <div class="sectionHead"><div><div class="eyebrow">01 · MATERIAL</div><h3>Select material treatment</h3></div><div id="engineBadge" class="engineBadge">ENGINE READY</div></div>
+    <div id="materialChoices" class="materialChoices"></div>
+    <div id="materialHelp" class="materialHelp">All Materials — the engine determines the applicable AACR2 material treatment from the complete question.</div>
+  </section>
+
+  <section class="workspace">
+    <aside class="inputPanel">
+      <div class="eyebrow">02 · QUESTION</div>
+      <h3>Catalogue question / title</h3>
+      <textarea id="question" placeholder="Paste the complete question, entry question, or title exactly as given…"></textarea>
+      <button id="generate" class="primary">⚡ GENERATE ALL VALID ENTRIES</button>
+      <div class="buttonRow"><button id="clear" class="secondary">CLEAR</button><button id="health" class="secondary">CHECK ENGINE</button></div>
+      <div id="loading" class="loading hidden">Reading complete question and building the full entry set…</div>
+      <div id="status" class="status">Ready.</div>
+    </aside>
+
+    <section id="result" class="outputPanel hidden">
+      <div class="resultHead">
+        <div><div class="eyebrow">03 · CATALOGUE RESULT</div><h3 id="answerTitle">No answer generated</h3><div id="resultMeta" class="resultMeta">—</div></div>
+        <div class="actions"><button id="copy" class="secondary">COPY ALL</button><button id="pdf" class="pdfBtn">⬇ PDF CARDS</button></div>
+      </div>
+      <div id="cards" class="cards"></div>
+      <div class="resultFoot"><span>Every generated access point is represented by a card.</span><span id="entryAudit">—</span></div>
+    </section>
+  </section>
+</main>
+<script src="/script.js?v=21"></script>
+</body>
+</html>
