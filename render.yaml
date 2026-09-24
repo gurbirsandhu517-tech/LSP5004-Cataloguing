@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: universal-aacr2-catalogue
-    env: node
-    buildCommand: npm install
-    startCommand: npm start
-    plan: free
