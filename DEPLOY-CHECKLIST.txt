@@ -1,10 +1,10 @@
-LSP5004 V20 DEPLOY CHECKLIST
+LSP5004 V25 DEPLOY CHECKLIST
 
 1. Upload/deploy the whole ZIP.
 2. Render build command: npm install
 3. Render start command: npm start
 4. Render Environment Variables: GEMINI_API_KEY = your Google Gemini API key
-5. Optional: GEMINI_MODEL = a currently available Gemini model (otherwise V20 discovers available generation models)
+5. Optional: GEMINI_MODEL = a currently available Gemini model (otherwise V25 discovers available generation models)
 6. Open /health and confirm: geminiConfigured:true, pdf:true, unlimitedCards:true
 7. Paste a complete catalogue question and select the material type or ALL MATERIALS.
 8. Generate. The result should contain every justified entry/card supported by the question.

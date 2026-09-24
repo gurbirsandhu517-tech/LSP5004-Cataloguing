@@ -1,6 +1,6 @@
-# LSP5004 V20 — Advanced AACR2 Catalogue Card Engine
+# LSP5004 V25 — Advanced AACR2 Catalogue Card Engine
 
-V20 is the advanced catalogue-card build for LSP5004.
+V25 is the advanced catalogue-card build for LSP5004.
 
 ## Core behavior
 - Gemini is the primary generation engine.
