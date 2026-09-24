@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LSP5004 — AACR2 Catalogue Studio</title>
+<link rel="stylesheet" href="/style.css?v=33">
+</head>
+<body>
+<header class="nav">
+  <div class="brand"><div class="logo">L5</div><div><strong>LSP5004</strong><span>AACR2 CATALOGUE STUDIO</span></div></div>
+  <div class="navRight"><span class="pill">UDC</span><span class="pill">AACR2</span><span id="engineBadge" class="pill statusPill">ENGINE CHECKING</span></div>
+</header>
+<main class="shell">
+  <section class="hero">
+    <div class="heroCopy"><div class="kicker">LIBRARY CATALOGUING WORKBENCH · V34</div><h1>Turn a catalogue question into a clean catalogue card.</h1><p>Paste the complete question exactly as given. The engine identifies the material treatment, builds the AACR2 entry, keeps the complete entry together, and exports the same card to PDF.</p></div>
+    <div class="heroFacts"><div><b>01</b><span>Choose treatment</span></div><div><b>02</b><span>Paste question</span></div><div><b>03</b><span>Generate card</span></div></div>
+  </section>
+
+  <section class="panel treatment">
+    <div class="panelHead"><div><div class="kicker">01 · MATERIAL TREATMENT</div><h2>How should AACR2 treat this?</h2></div><button id="health" class="ghost">CHECK ENGINE</button></div>
+    <div id="materialChoices" class="materials"></div>
+    <p id="materialHelp" class="help">All Materials reads the complete question and chooses the applicable treatment automatically.</p>
+  </section>
+
+  <section class="grid">
+    <section class="panel composer">
+      <div class="kicker">02 · CATALOGUE QUESTION</div>
+      <h2>Paste the question or bibliographic statement</h2>
+      <p class="sub">Labels such as Title / Author / Publisher are optional. Natural-language questions are accepted too.</p>
+      <textarea id="question" spellcheck="false" placeholder="Example: Create a complete AACR2 catalogue entry for Library and Information Science Research / edited by Sandra L. Smith. — New York : Elsevier, 1985– . Quarterly. Vol. 1, no. 1 (1985)– . ISSN 0740-8188."></textarea>
+      <div class="quick"><button data-fill="serial">Serial example</button><button data-fill="motion">Motion picture example</button><button data-fill="book">Book example</button></div>
+      <button id="generate" class="generate">GENERATE CATALOGUE ENTRY <span>→</span></button>
+      <div class="progress"><span id="loadingDot"></span><span id="status">Ready for a question.</span></div>
+    </section>
+
+    <section id="result" class="panel result hidden">
+      <div class="resultTop"><div><div class="kicker">03 · GENERATED ENTRY</div><h2 id="answerTitle">Catalogue entry</h2><div id="resultMeta" class="sub">—</div></div><div class="actions"><button id="copy" class="ghost">COPY</button><button id="pdf" class="download">DOWNLOAD PDF</button></div></div>
+      <div id="cards" class="cards"></div>
+      <div class="resultBottom"><span id="entryAudit">—</span><span>Screen and PDF use the same generated card.</span></div>
+    </section>
+  </section>
+</main>
+<script src="/script.js?v=33"></script>
+</body></html>
