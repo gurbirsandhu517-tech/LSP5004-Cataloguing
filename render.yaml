@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: lsp5004-cataloguing
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
