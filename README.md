@@ -1,1 +1,0 @@
-# Advanced Catalogue Card Workbench - Perfect Border Alignment Fix
