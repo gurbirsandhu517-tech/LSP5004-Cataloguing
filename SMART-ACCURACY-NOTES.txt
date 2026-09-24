@@ -1,0 +1,16 @@
+V44 SMART ACCURACY ADD-ON
+
+This package keeps the V44 version identifier. It adds a local deterministic Smart Accuracy Gate after AI generation.
+
+The gate:
+- locks bibliographic facts to the supplied question;
+- prevents the instruction itself from becoming the title;
+- checks ISSN/ISBN consistency when supplied;
+- checks generated personal/corporate access points against supplied evidence;
+- removes duplicate access points and detects duplicate catalogue lines;
+- checks selected material type against the generated record;
+- rejects an unsafe AI result and falls back to the evidence-grounded local AACR2 parser;
+- keeps web/search citations out of the catalogue-card text.
+
+Google Search remains an evidence/research layer, not a visible part of the catalogue card.
+The catalogue card contains only the formatted bibliographic record.
