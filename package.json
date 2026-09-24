@@ -1,0 +1,16 @@
+{
+  "name": "lsp5004-cataloguing",
+  "version": "34.0.0",
+  "description": "LSP5004 AACR2 Cataloguing Engine V34 \u2014 robust all-materials parser and PDF",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pdfkit": "^0.15.0"
+  }
+}
