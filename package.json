@@ -1,1 +1,0 @@
-{"name": "workbench-app", "version": "1.4.0", "main": "server.js", "dependencies": {"express": "^4.18.2"}}
