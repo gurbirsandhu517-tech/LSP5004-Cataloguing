@@ -4,7 +4,7 @@ const PDFDocument = require("pdfkit");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const VERSION = "V44-AACR2-TRADITIONAL-CARD-STABLE";
+const VERSION = "V45-AACR2-TRADITIONAL-CARD-STABLE-FIT";
 
 app.use(express.json({limit:"25mb"}));
 app.use(express.urlencoded({extended:true,limit:"25mb"}));
@@ -146,14 +146,30 @@ function parseSerialQuestion(q, materialType){
   // deterministic and avoids guessing a title from the whole question.
   const labeledTitle=extractLabeled(raw,['Title','Title proper','Title of the serial']);
   const labeledEditor=extractLabeled(raw,['Editor','Edited by']);
+  const labeledResponsibility=extractLabeled(raw,['Statement of responsibility','Responsibility statement']);
   const labeledPlace=extractLabeled(raw,['Place','Place of Publication','Publication Place']);
   const labeledPublisher=extractLabeled(raw,['Publisher','Publisher/Distributor']);
   const labeledDate=extractLabeled(raw,['Date','Date of Publication','Publication Date']);
   const labeledFrequency=extractLabeled(raw,['Frequency']);
+  const labeledNumbering=extractLabeled(raw,['Numbering','Designation']);
+  const labeledPhysical=extractLabeled(raw,['Physical description','Physical Description','Extent']);
+  const labeledSeries=extractLabeled(raw,['Series','Series statement']);
   const labeledISSN=extractLabeled(raw,['ISSN']);
 
+  // Multi-line labelled blocks are preserved as supplied instead of being lost
+  // when Notes/Subjects/Added entries contain several lines.
+  const block=(label,nextLabels)=>{
+    const next=nextLabels.map(x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
+    const re=new RegExp('^\\s*'+label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*:\\s*([\\s\\S]*?)(?=^\\s*(?:'+next+')\\s*:|(?![\\s\\S]))','im');
+    const m=raw.match(re);
+    return m?m[1].trim():'';
+  };
+  const notesBlock=block('Notes',['Subjects','Added entries','Added entry','UDC','Call No.','Call number','ISSN']);
+  const subjectsBlock=block('Subjects',['Added entries','Added entry','UDC','Call No.','Call number','ISSN']);
+  const addedEntriesBlock=block('Added entries',['UDC','Call No.','Call number','ISSN']);
+
   let titleStatement=labeledTitle?strip(labeledTitle):'';
-  let responsibility=labeledEditor?'edited by '+strip(labeledEditor):'';
+  let responsibility=labeledResponsibility?strip(labeledResponsibility):(labeledEditor?'edited by '+strip(labeledEditor):'');
 
   if(!titleStatement){
     const titleSlash=text.match(/(?:for|of)\s+(?:the\s+)?(?:following\s+)?(.+?)\s*\/\s*([^—]+?)(?=\s+—|\s+-\s+|$)/i)
@@ -178,7 +194,7 @@ function parseSerialQuestion(q, materialType){
   titleStatement=titleStatement.replace(/^(?:the\s+)?(?:serial publication|serial|journal|periodical)\s*[:\-]\s*/i,'').trim();
 
   const edition=(text.match(/\b(?:\d+(?:st|nd|rd|th)\s+ed(?:ition)?|edition)\b/i)||[])[0]||'';
-  const numbering=(text.match(/\bVol\.\s*\d+\s*,\s*no\.\s*\d+(?:\s*\([^)]*\))?/i)||[])[0]||natural.numbering||'';
+  const numbering=labeledNumbering||((text.match(/\bVol\.\s*\d+\s*,\s*no\.\s*\d+(?:\s*\([^)]*\))?/i)||[])[0]||natural.numbering||'');
   const frequency=labeledFrequency||((text.match(/\b(Quarterly|Monthly|Bimonthly|Biweekly|Weekly|Annual|Semiannual|Irregular)\b/i)||[])[1]||natural.frequency||'');
   const issn=labeledISSN||((text.match(/\bISSN\s*[:#-]?\s*([0-9]{4}[-\s]?[0-9]{3}[0-9Xx])\b/i)||[])[1]||natural.issn||'');
 
@@ -196,8 +212,8 @@ function parseSerialQuestion(q, materialType){
   const continues=(text.match(/\bContinues\s*:\s*(.+?)(?=\s+(?:Includes|Subject coverage|Subjects|Added entries|UDC|Call\s*(?:No\.?|number)|ISSN)\s*:?\s*|\s*$)/i)||[])[1]||'';
   const includes=(text.match(/\bIncludes\s*:?\s*(.+?)(?=\s+Subject coverage\s+includes|\s+Subjects\s*:|\s+Added entries\s*:|\s+UDC\s*:|\s+Call\s*(?:No\.?|number)\s*:|\s+ISSN\s*:|\s*$)/i)||[])[1]||'';
   const coverage=(text.match(/\bSubject coverage\s+(?:includes|:)\s*(.+?)(?=\s+Subjects\s*:|\s+Added entries\s*:|\s+UDC\s*:|\s+Call\s*(?:No\.?|number)\s*:|\s+ISSN\s*:|\s*$)/i)||[])[1]||'';
-  const subjectBlock=(text.match(/\bSubjects\s*:\s*(.+?)(?=\s+(?:Added entries|UDC|Call\s*(?:No|number)|ISSN)\s*:|\s*$)/i)||[])[1]||'';
-  const addedBlock=(text.match(/\bAdded entries\s*:\s*(.+?)(?=\s+UDC\s*:|\s+Call\s*(?:No\.?|number)\s*:|\s*$)/i)||[])[1]||'';
+  const subjectBlock=subjectsBlock || (text.match(/\bSubjects\s*:\s*(.+?)(?=\s+(?:Added entries|UDC|Call\s*(?:No|number)|ISSN)\s*:|\s*$)/i)||[])[1]||'';
+  const addedBlock=addedEntriesBlock || (text.match(/\bAdded entries\s*:\s*(.+?)(?=\s+UDC\s*:|\s+Call\s*(?:No\.?|number)\s*:|\s*$)/i)||[])[1]||'';
   const udc=(text.match(/\bUDC\s*:\s*([^\s.]+(?:\([^)]*\))?)/i)||[])[1]||'';
   const call=(text.match(/\bCall\s*(?:No\.?|number)\s*:\s*([^\s]+(?:\s+[^\s]+)?)/i)||[])[1]||'';
   const accession=extractLabeled(raw,["Accession number","Accession no","Accession"]);
@@ -211,26 +227,37 @@ function parseSerialQuestion(q, materialType){
   if(edition) main.push(edition.replace(/\.*$/,'')+'.');
   if(numbering) main.push(numbering.replace(/\.*$/,'')+'.');
   if(imprint) main.push('— '+imprint.replace(/\.*$/,'')+'.');
+  if(labeledPhysical) main.push(strip(labeledPhysical).replace(/\.*$/,'')+'.');
+  if(labeledSeries) main.push('Series: '+strip(labeledSeries).replace(/\.*$/,'')+'.');
   if(frequency) main.push(frequency+'.');
   if(continues) main.push('Continues: '+strip(continues)+'.');
   if(includes) main.push('Includes '+strip(includes).replace(/\.*$/,'')+'.');
   if(coverage) main.push('Subject coverage includes '+strip(coverage).replace(/\.*$/,'')+'.');
+  if(notesBlock){
+    for(const x of notesBlock.split(/\n+/).map(strip).filter(Boolean)) main.push(x.endsWith('.')?x:x+'.');
+  }
   if(subjectBlock){
     main.push('Subjects:');
-    for(const x of subjectBlock.split(/\.\s+(?=[A-Z])/).map(strip).filter(Boolean)) main.push(x.endsWith('.')?x:x+'.');
+    for(const x of subjectBlock.split(/\n+|(?<=\.)\s+(?=[A-Z])/).map(strip).filter(Boolean)) main.push(x.endsWith('.')?x:x+'.');
   }
   if(issn) main.push('ISSN '+issn+'.');
   if(udc) main.push('UDC: '+udc+'.');
   if(call) main.push('Call No.: '+call+'.');
 
   const traceNames=[];
-  if(labeledEditor) traceNames.push(strip(labeledEditor));
+  if(labeledEditor) traceNames.push(...strip(labeledEditor).split(/\s*;\s*|\s+with\s+contributions?\s+from\s+/i).map(strip).filter(Boolean));
   const editorMatch=text.match(/\bedited by\s+(.+?)(?=\s*;|\s+with\s+|\s+—|\s*$)/i);
-  if(!labeledEditor && editorMatch) traceNames.push(strip(editorMatch[1]));
+  if(!labeledEditor && editorMatch) traceNames.push(...strip(editorMatch[1]).split(/\s*;\s*|\s+and\s+/i).map(strip).filter(Boolean));
+  if(addedBlock){
+    for(const x of addedBlock.split(/\n+/).map(strip).filter(Boolean)){
+      const cleaned=x.replace(/^\d+\.\s*/,'').replace(/[.]$/,'').trim();
+      if(cleaned && !traceNames.some(n=>n.toLowerCase()===cleaned.toLowerCase())) traceNames.push(cleaned);
+    }
+  }
 
   if(traceNames.length){
     main.push('Tracing:');
-    traceNames.forEach((n,i)=>main.push(`${i+1}. ${n}.`));
+    traceNames.forEach((n,i)=>main.push(`${i+1}. ${n.replace(/[.]$/,'')}.`));
   }
 
   const cards=[{entryType:'MAIN ENTRY',cardType:'Main Entry',callNumber:call,accessionNumber:accession,lines:main}];
@@ -238,8 +265,8 @@ function parseSerialQuestion(q, materialType){
   if(!imprint) missing.push('Publication/place/date details were not identified.');
   return {
     materialType:'Serial Publication',mainEntry:titleStatement,titleStatement,responsibility,
-    edition,materialSpecific:numbering,imprint,physicalDescription:'',series:'',
-    notes:[frequency,continues,includes,coverage].filter(Boolean).join(' '),
+    edition,materialSpecific:numbering,imprint,physicalDescription:labeledPhysical,series:labeledSeries,
+    notes:[frequency,continues,includes,coverage,notesBlock].filter(Boolean).join(' '),
     standardNumber:issn?'ISSN '+issn:'',callNumber:call,accessionNumber:accession,
     addedEntries:traceNames.map(x=>({type:'personal name',heading:x,reference:'Tracing on main entry.'})),
     subjectEntries:subjectBlock?subjectBlock.split(/\.\s+(?=[A-Z])/).filter(Boolean).map(x=>({type:'subject',heading:strip(x),reference:'Subject heading on main entry.'})):[],
@@ -662,7 +689,7 @@ function prepareTraditionalCardLines(lines){
     const item=typeof raw[i]==='string'?{text:raw[i],kind:'field'}:raw[i];
     if(item.kind==='blank'){out.push({text:'',kind:'blank'});continue;}
     // 42 characters is the safe width of the 5 x 3 in card at the current type size.
-    const wrapped=wrapCardField(item.text,42);
+    const wrapped=wrapCardField(item.text,54);
     wrapped.forEach((t,j)=>out.push({text:t,kind:j===0?item.kind:'continuation'}));
   }
   return out;
@@ -828,46 +855,49 @@ app.get("/health",(req,res)=>res.json({ok:true,version:VERSION,geminiConfigured:
 function drawCard(doc,card,no,total){
   const W=12.5*28.3464567,H=7.5*28.3464567;
   const v1=34,v2=58;
-  const fieldX=v1+3, descriptionX=v2+7, right=W-7, textW=right-descriptionX;
-  const rowH=23, headerH=23;
+  const descriptionX=v2+7, right=W-7, textW=right-descriptionX;
+  const headerH=40, rowH=(H-headerH)/8;
   const prepared=Array.isArray(card.layoutLines)&&card.layoutLines.length
     ? card.layoutLines
     : arr(card.lines).map((x,i)=>({text:str(x),kind:i?'continuation':'title'}));
 
   doc.save();
   doc.rect(0,0,W,H).lineWidth(0.8).strokeColor('#111').stroke();
+  // Traditional vertical ruling: filing block, indent/rule column, description column.
   doc.lineWidth(0.55).strokeColor('#777');
   doc.moveTo(v1,0).lineTo(v1,H).stroke();
   doc.moveTo(v2,0).lineTo(v2,H).stroke();
-  for(let y=rowH;y<H;y+=rowH) doc.moveTo(0,y).lineTo(W,y).stroke();
+  // Horizontal ruling is aligned to the actual content rows, never through text.
+  doc.moveTo(0,headerH).lineTo(W,headerH).stroke();
+  for(let i=1;i<8;i++){
+    const y=headerH+i*rowH;
+    doc.moveTo(0,y).lineTo(W,y).stroke();
+  }
 
   doc.fillColor('#111').font('Helvetica-Bold').fontSize(6.6)
-    .text(str(card.cardType||card.entryType||'CATALOGUE ENTRY').toUpperCase(),descriptionX,5,{width:W-descriptionX-72,align:'left',lineBreak:false});
+    .text(str(card.cardType||card.entryType||'CATALOGUE ENTRY').toUpperCase(),descriptionX,8,{width:W-descriptionX-72,align:'left',lineBreak:false});
   doc.fillColor('#555').font('Helvetica-Bold').fontSize(6.2)
-    .text(`CARD ${no}${total?' / '+total:''}`,descriptionX,5,{width:W-descriptionX-5,align:'right',lineBreak:false});
+    .text(`CARD ${no}${total?' / '+total:''}`,descriptionX,8,{width:W-descriptionX-5,align:'right',lineBreak:false});
 
   if(card.callNumber) doc.fillColor('#000').font('Courier-Bold').fontSize(6.4)
-    .text(card.callNumber,3,5,{width:v1-6,align:'left',lineBreak:false});
+    .text(card.callNumber,3,7,{width:v1-6,align:'left',lineBreak:false});
   if(card.accessionNumber) doc.fillColor('#000').font('Courier-Bold').fontSize(6.2)
-    .text(card.accessionNumber,3,rowH*5+1,{width:v1-6,align:'left',lineBreak:false});
+    .text(card.accessionNumber,3,rowH*5+headerH+1,{width:v1-6,align:'left',lineBreak:false});
 
-  const fs=7.25;
-  let y=headerH+4;
-  for(const item of prepared.slice(0,Math.floor((H-headerH-5)/rowH))){
-    const text=str(item.text); if(!text){y+=rowH;continue;}
-    // Traditional card indention: description paragraphs begin at the first
-    // text indention; continuations and subordinate tracing lines move to the
-    // next indention. The title/statement area begins in the description column.
-    let x=fieldX, width=right-fieldX;
-    if(item.kind==='title'){x=descriptionX;width=textW;}
-    else if(item.kind==='sub' || item.kind==='continuation'){x=descriptionX;width=textW;}
+  const fs=7.1;
+  for(let i=0;i<Math.min(prepared.length,8);i++){
+    const item=prepared[i];
+    const text=str(item.text); if(!text) continue;
+    const y=headerH+i*rowH+3;
+    // Every new AACR2 field starts at the description column. Only subordinate
+    // tracing/subject lines receive a small subordinate indent.
+    const x=(item.kind==='sub') ? descriptionX+12 : descriptionX;
+    const width=right-x;
     doc.fillColor('#000').font('Courier-Bold').fontSize(fs)
-      .text(text,x,y,{width,height:rowH-2,ellipsis:false,lineBreak:false,continued:false});
-    y+=rowH;
+      .text(text,x,y,{width,height:rowH-5,ellipsis:false,lineBreak:false,continued:false});
   }
   doc.restore();
 }
-
 app.post("/generate-pdf",(req,res)=>{
   // Use the exact already-validated cards shown in the browser. Do not regenerate
   // or re-wrap them here, otherwise PDF and on-screen cards can diverge.
@@ -876,12 +906,12 @@ app.post("/generate-pdf",(req,res)=>{
   const W=12.5*28.3464567,H=7.5*28.3464567;
   const doc=new PDFDocument({size:[W,H],margin:0,autoFirstPage:false,compress:true});
   res.setHeader("Content-Type","application/pdf");
-  res.setHeader("Content-Disposition",'attachment; filename="LSP5004-AACR2-Catalogue-Cards-V44.pdf"');
+  res.setHeader("Content-Disposition",'attachment; filename="LSP5004-AACR2-Catalogue-Cards-V45.pdf"');
   doc.pipe(res);
   cards.forEach((c,i)=>{doc.addPage({size:[W,H],margin:0});drawCard(doc,c,i+1,cards.length);});
   doc.end();
 });
 
-app.get("/version",(req,res)=>res.set("Cache-Control","no-store").json({version:VERSION,cardSize:"12.5 × 7.5 cm",primary:"Gemini",geminiConfigured:Boolean(process.env.GEMINI_API_KEY||process.env.GOOGLE_API_KEY||process.env.GOOGLE_GEMINI_API_KEY||process.env.API_KEY),verification:"Google Search grounding with direct-Gemini retry",materials:"All / Book / Serial Publication / Map / Motion Picture / Video Recording / Sound Recording / Electronic Resource / Microform",pageLimit:"One catalogue entry per question/card; automatic continuation cards only for physical overflow; no truncation",pdf:true,cardRules:"12.5 × 7.5 cm; traditional AACR2 paragraph indent; field-aligned wrapping; horizontal/vertical ruling; accession line 5"}));
+app.get("/version",(req,res)=>res.set("Cache-Control","no-store").json({version:VERSION,cardSize:"12.5 × 7.5 cm",primary:"Gemini",geminiConfigured:Boolean(process.env.GEMINI_API_KEY||process.env.GOOGLE_API_KEY||process.env.GOOGLE_GEMINI_API_KEY||process.env.API_KEY),verification:"Google Search grounding with direct-Gemini retry",materials:"All / Book / Serial Publication / Map / Motion Picture / Video Recording / Sound Recording / Electronic Resource / Microform",pageLimit:"One catalogue entry per question/card; automatic continuation cards only for physical overflow; no truncation",pdf:true,cardRules:"12.5 × 7.5 cm; traditional AACR2 field starts; field-aligned wrapping; horizontal/vertical ruling aligned to content rows; bold catalogue text; accession line 5"}));
 app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
 app.listen(PORT,"0.0.0.0",()=>console.log(`LSP5004 ${VERSION} running on ${PORT}`));
