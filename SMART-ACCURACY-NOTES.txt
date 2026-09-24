@@ -1,0 +1,1 @@
+Exact table-based grid structure ensuring text never crosses vertical border lines.
